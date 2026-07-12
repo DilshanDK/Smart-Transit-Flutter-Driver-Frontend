@@ -2,9 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../viewmodel/auth_viewmodel.dart';
-import '../../dashboard/ui/driver_dashboard_screen.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_event.dart';
+import '../bloc/auth_state.dart';
 class DriverLoginScreen extends StatefulWidget {
   const DriverLoginScreen({super.key});
 
@@ -16,43 +17,22 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _driverIdController = TextEditingController();
   final _busRegController = TextEditingController();
-  final _authViewModel = AuthViewModel();
 
   @override
   void dispose() {
     _driverIdController.dispose();
     _busRegController.dispose();
-    _authViewModel.dispose();
     super.dispose();
   }
 
-  Future<void> _handleVerifyShift() async {
+  void _handleVerifyShift() {
     if (_formKey.currentState!.validate()) {
-      final success = await _authViewModel.verifyDriver(
-        driverId: _driverIdController.text.trim(),
-        busRegistration: _busRegController.text.trim().toUpperCase(),
+      context.read<AuthBloc>().add(
+        DriverVerifyRequested(
+          driverId: _driverIdController.text.trim(),
+          busRegistration: _busRegController.text.trim().toUpperCase(),
+        ),
       );
-
-      if (mounted) {
-        if (success) {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => const DriverDashboardScreen(),
-              transitionsBuilder: (context, anim, secondaryAnimation, child) => FadeTransition(opacity: anim, child: child),
-              transitionDuration: const Duration(milliseconds: 600),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_authViewModel.errorMessage ?? 'Shift verification failed.'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
     }
   }
 
@@ -62,9 +42,19 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      body: ListenableBuilder(
-        listenable: _authViewModel,
-        builder: (context, _) {
+      body: BlocConsumer<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: theme.colorScheme.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
           return Stack(
             children: [
               // 1. Sleek Night-Time / Charcoal Gradient Background matching the charging station vibe
@@ -171,12 +161,12 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
 
                           // 6. Action Button
                           ElevatedButton(
-                            onPressed: _authViewModel.isLoading ? null : _handleVerifyShift,
+                            onPressed: state is AuthLoading ? null : _handleVerifyShift,
                             style: ElevatedButton.styleFrom(
                               elevation: 4,
                               shadowColor: theme.colorScheme.primary.withOpacity(0.3),
                             ),
-                            child: _authViewModel.isLoading
+                            child: state is AuthLoading
                                 ? const SizedBox(
                                     height: 20,
                                     width: 20,

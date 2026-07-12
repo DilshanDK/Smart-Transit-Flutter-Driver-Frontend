@@ -1,11 +1,14 @@
 // ignore_for_file: deprecated_member_use
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../viewmodel/dashboard_viewmodel.dart';
-import '../../../core/storage/secure_storage.dart';
-import '../../auth/ui/driver_login_screen.dart';
+import '../bloc/dashboard_bloc.dart';
+import '../bloc/dashboard_event.dart';
+import '../bloc/dashboard_state.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_event.dart';
 import 'camera_scanner_screen.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
@@ -16,30 +19,34 @@ class DriverDashboardScreen extends StatefulWidget {
 }
 
 class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
-  final DashboardViewModel _viewModel = DashboardViewModel();
   int _currentIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _viewModel.loadProfile();
-  }
-
-  @override
-  void dispose() {
-    _viewModel.dispose();
-    super.dispose();
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return ListenableBuilder(
-      listenable: _viewModel,
-      builder: (context, _) {
-
-        if (_viewModel.isLoading) {
+    return BlocConsumer<DashboardBloc, DashboardState>(
+      listener: (context, state) {
+        if (state.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error!),
+              backgroundColor: theme.colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        if (state.isLoading && state.profile == null) {
           return Scaffold(
             backgroundColor: isDark ? const Color(0xFF0F1418) : const Color(0xFFF9F9FE),
             body: const Center(
@@ -49,9 +56,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         }
 
         final pages = [
-          _buildHomeTab(isDark),
-          _buildBoardingTab(isDark),
-          _buildProfileTab(isDark),
+          _buildHomeTab(state, isDark, theme),
+          _buildBoardingTab(state, isDark),
+          _buildProfileTab(state, isDark),
         ];
 
         return Scaffold(
@@ -139,9 +146,10 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     ).animate().fade(delay: 400.ms).slideY(begin: 0.5, end: 0, curve: Curves.easeOut);
   }
 
-  Widget _buildHomeTab(bool isDark) {
-    final profile = _viewModel.profile;
+  Widget _buildHomeTab(DashboardState state, bool isDark, ThemeData theme) {
+    final profile = state.profile;
     final isOnShift = profile?.isOnShift ?? false;
+    final greeting = _getGreeting();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -156,7 +164,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _viewModel.greeting,
+                    greeting,
                     style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white54 : Colors.black54),
                   ),
                   Text(
@@ -238,24 +246,16 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _viewModel.isShiftToggling
+                    onPressed: state.isShiftToggling
                         ? null
-                        : () async {
-                            final success = await _viewModel.toggleShift();
-                            if (mounted && success) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(isOnShift ? 'Shift ended successfully' : 'Shift started successfully'),
-                                  backgroundColor: const Color(0xFF28A745),
-                                ),
-                              );
-                            }
+                        : () {
+                            context.read<DashboardBloc>().add(const ToggleShiftRequested());
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isOnShift ? Colors.redAccent : const Color(0xFF28A745),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: _viewModel.isShiftToggling
+                    child: state.isShiftToggling
                         ? const CircularProgressIndicator(color: Colors.white)
                         : Text(
                             isOnShift ? 'End Shift' : 'Start Shift',
@@ -338,8 +338,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     );
   }
 
-  Widget _buildBoardingTab(bool isDark) {
-    final isOnShift = _viewModel.profile?.isOnShift ?? false;
+  Widget _buildBoardingTab(DashboardState state, bool isDark) {
+    final isOnShift = state.profile?.isOnShift ?? false;
 
     if (!isOnShift) {
       return Center(
@@ -393,7 +393,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => CameraScannerScreen(viewModel: _viewModel),
+                          builder: (_) => const CameraScannerScreen(),
                         ),
                       );
                     },
@@ -424,8 +424,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     );
   }
 
-  Widget _buildProfileTab(bool isDark) {
-    final profile = _viewModel.profile;
+  Widget _buildProfileTab(DashboardState state, bool isDark) {
+    final profile = state.profile;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -460,15 +460,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.redAccent),
             title: Text('Log Out', style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-            onTap: () async {
-              await SecureStorage.clearTokens();
-              if (mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DriverLoginScreen()),
-                  (route) => false,
-                );
-              }
+            onTap: () {
+              context.read<AuthBloc>().add(const LogoutRequested());
             },
           ),
         ],

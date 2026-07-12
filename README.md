@@ -1,17 +1,30 @@
-# smarttransit_flutter_driver
+# 🚌 Smart Transit System - Driver App
 
-A new Flutter project.
+This repository contains the Driver Mobile Application for the Smart Transit System, built with **Flutter**. Designed specifically for transit operators, this app allows drivers to broadcast their live location, manage routes, and validate passenger tickets seamlessly.
 
-## Getting Started
+## 🚀 Features
+- **Live GPS Broadcasting:** Connects to the backend via WebSockets to stream real-time geographical coordinates and heading data to the server.
+- **QR Ticket Scanner:** Built-in camera integration to quickly scan and validate passenger QR tickets upon boarding, checking for authenticity and expiration.
+- **Active Route Management:** View assigned routes, start/end journeys, and monitor current passenger manifest counts.
+- **Push Notifications:** Receive dispatch alerts or route updates directly from administrators via Firebase Cloud Messaging.
 
-This project is a starting point for a Flutter application.
+## 💻 Tech Stack
+- **Framework:** Flutter (Dart)
+- **State Management:** BLoC / Provider
+- **Networking/Real-time:** Dio, Socket.io-client
+- **Hardware Integrations:** Location/GPS services, Camera (QR Scanning)
+- **Push Notifications:** Firebase
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠️ Installation & Setup
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. **Clone the repository**
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+3. **Configure Environment Variables**
+   Create a `.env` file in the root directory linking to the backend API.
+4. **Run the application**
+   ```bash
+   flutter run
+   ```
