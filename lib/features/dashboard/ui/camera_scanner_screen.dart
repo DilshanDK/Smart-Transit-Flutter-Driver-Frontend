@@ -1,14 +1,15 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../viewmodel/dashboard_viewmodel.dart';
+import '../bloc/dashboard_bloc.dart';
+import '../bloc/dashboard_event.dart';
+import '../bloc/dashboard_state.dart';
 
 class CameraScannerScreen extends StatefulWidget {
-  final DashboardViewModel viewModel;
-
-  const CameraScannerScreen({super.key, required this.viewModel});
+  const CameraScannerScreen({super.key});
 
   @override
   State<CameraScannerScreen> createState() => _CameraScannerScreenState();
@@ -19,121 +20,116 @@ class _CameraScannerScreenState extends State<CameraScannerScreen> {
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
 
-  bool _isProcessing = false;
-  Map<String, dynamic>? _scanResult;
-  bool _hasResult = false;
-
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  void _onDetect(BarcodeCapture capture) async {
+  void _onDetect(BarcodeCapture capture) {
     final List<Barcode> barcodes = capture.barcodes;
-    if (barcodes.isEmpty || _isProcessing) return;
+    if (barcodes.isEmpty) return;
 
     final String? code = barcodes.first.rawValue;
     if (code == null || code.isEmpty) return;
 
-    setState(() {
-      _isProcessing = true;
-    });
+    final state = context.read<DashboardBloc>().state;
+    if (state.isTapProcessing) return;
 
-    // Call API to process tap
-    final result = await widget.viewModel.processBoardingTap(code, 'QR');
-
-    setState(() {
-      _isProcessing = false;
-      _scanResult = result;
-      _hasResult = true;
-    });
+    context.read<DashboardBloc>().add(
+          ProcessBoardingTapRequested(token: code, mode: 'QR'),
+        );
   }
 
   void _resetScanner() {
-    setState(() {
-      _scanResult = null;
-      _hasResult = false;
-      _isProcessing = false;
-    });
+    context.read<DashboardBloc>().add(const ClearTapResultRequested());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F1418),
-      appBar: AppBar(
-        title: Text(
-          'Console Scanner',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Stack(
-        children: [
-          if (!_hasResult) ...[
-            // Live Scanner view
-            MobileScanner(
-              controller: _controller,
-              onDetect: _onDetect,
-            ),
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        final hasResult = state.tapResult != null || state.tapError != null;
 
-            // Scanner Overlay Frame
-            Center(
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF28A745), width: 3),
-                  borderRadius: BorderRadius.circular(24),
+        return Scaffold(
+          backgroundColor: const Color(0xFF0F1418),
+          appBar: AppBar(
+            title: Text(
+              'Console Scanner',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                _resetScanner();
+                Navigator.pop(context);
+              },
+            ),
+          ),
+          body: Stack(
+            children: [
+              if (!hasResult) ...[
+                // Live Scanner view
+                MobileScanner(
+                  controller: _controller,
+                  onDetect: _onDetect,
                 ),
-              ),
-            ),
 
-            // Scanning Status / Instruction Text
-            Positioned(
-              bottom: 80,
-              left: 24,
-              right: 24,
-              child: Text(
-                _isProcessing ? 'Processing ticket...' : 'Align passenger QR ticket within the frame',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                // Scanner Overlay Frame
+                Center(
+                  child: Container(
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF28A745), width: 3),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
 
-          // Loading Indicator during active API processing
-          if (_isProcessing)
-            Container(
-              color: Colors.black54,
-              child: const Center(
-                child: CircularProgressIndicator(color: Color(0xFF28A745)),
-              ),
-            ),
+                // Scanning Status / Instruction Text
+                Positioned(
+                  bottom: 80,
+                  left: 24,
+                  right: 24,
+                  child: Text(
+                    state.isTapProcessing ? 'Processing ticket...' : 'Align passenger QR ticket within the frame',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
 
-          // Scan Result Overlay Screen
-          if (_hasResult && _scanResult != null) _buildResultView(),
-        ],
-      ),
+              // Loading Indicator during active API processing
+              if (state.isTapProcessing)
+                Container(
+                  color: Colors.black54,
+                  child: const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF28A745)),
+                  ),
+                ),
+
+              // Scan Result Overlay Screen
+              if (hasResult) _buildResultView(state),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildResultView() {
-    final isError = _scanResult!['error'] == true;
-    final isInsufficient = _scanResult!['statusCode'] == 402;
-    final String event = _scanResult!['event'] ?? '';
-    final String message = _scanResult!['message'] ?? 'Scan processed';
-    final double? fare = _scanResult!['fare'] != null ? double.tryParse(_scanResult!['fare'].toString()) : null;
+  Widget _buildResultView(DashboardState state) {
+    final isError = state.tapError != null || (state.tapResult != null && state.tapResult!['error'] == true);
+    final isInsufficient = state.tapResult != null && state.tapResult!['statusCode'] == 402;
+    final String event = state.tapResult?['event'] ?? '';
+    final String message = state.tapError ?? state.tapResult?['message'] ?? 'Scan processed';
+    final double? fare = state.tapResult?['fare'] != null ? double.tryParse(state.tapResult!['fare'].toString()) : null;
 
     Color themeColor = const Color(0xFF28A745);
     IconData icon = Icons.check_circle_outline_rounded;
@@ -148,6 +144,11 @@ class _CameraScannerScreenState extends State<CameraScannerScreen> {
     } else if (event == 'TAP_OFF') {
       statusTitle = 'TAP OFF COMPLETE';
       detailsText = 'Fare: LKR ${(fare ?? 0).toStringAsFixed(2)}\nJourney Completed successfully.';
+    } else if (event == 'OFFLINE_SAVED') {
+      themeColor = const Color(0xFFF1C40F);
+      icon = Icons.offline_bolt_outlined;
+      statusTitle = 'OFFLINE SAVED';
+      detailsText = 'Ticket registered offline. Local cache stored. Syncing will resume automatically when internet access returns.';
     }
 
     return Container(
