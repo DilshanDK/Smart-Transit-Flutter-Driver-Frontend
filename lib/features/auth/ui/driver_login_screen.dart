@@ -1,11 +1,13 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: use_build_context_synchronously, await_only_futures, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../data/repositories/auth_repository.dart';
 class DriverLoginScreen extends StatefulWidget {
   const DriverLoginScreen({super.key});
 
@@ -32,6 +34,30 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
           driverId: _driverIdController.text.trim(),
           busRegistration: _busRegController.text.trim().toUpperCase(),
         ),
+      );
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return; // User canceled
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken != null) {
+        final authRepo = AuthRepository();
+        await authRepo.googleLogin(idToken);
+        if (!mounted) return;
+        // After successful token exchange, trigger app reload or navigate to home
+        Navigator.of(context).pushReplacementNamed('/home'); // Adjust based on your routing
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Google Sign-In failed. Please try again.')),
       );
     }
   }
@@ -177,6 +203,20 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                                   )
                                 : const Text('Start Shift'),
                           ).animate().fade(delay: 600.ms).slideY(begin: 0.2, end: 0),
+
+                          const SizedBox(height: 16),
+
+
+
+                          OutlinedButton.icon(
+                            onPressed: _handleGoogleSignIn,
+                            icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
+                            label: const Text('Sign in with Google'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.colorScheme.onSurface,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ).animate().fade(delay: 680.ms).slideY(begin: 0.2, end: 0),
 
                           const SizedBox(height: 24),
                           

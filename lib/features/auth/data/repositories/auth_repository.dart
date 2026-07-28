@@ -34,6 +34,31 @@ class AuthRepository {
     }
   }
 
+  Future<Map<String, dynamic>> googleLogin(String idToken) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/auth/driver/google',
+        data: {'idToken': idToken},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        await SecureStorage.saveTokens(
+          accessToken: data['accessToken'],
+          refreshToken: data['refreshToken'],
+        );
+        await PushNotificationService.instance.registerDeviceToken();
+        return data['user'] as Map<String, dynamic>;
+      } else {
+        throw Exception(response.data['message'] ?? 'Google Login failed');
+      }
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Google sign-in failed.');
+    } catch (e) {
+      throw Exception('An unexpected error occurred during Google login.');
+    }
+  }
+
   Future<void> logout() async {
     try {
       await _apiClient.dio.post('/auth/logout');

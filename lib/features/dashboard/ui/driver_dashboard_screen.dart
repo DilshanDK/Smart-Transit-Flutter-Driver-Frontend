@@ -28,6 +28,95 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     return 'Good Evening';
   }
 
+  void _handleStartShift(BuildContext context, bool isOnShift) {
+    if (isOnShift) {
+      context.read<DashboardBloc>().add(const ToggleShiftRequested());
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: isDark ? const Color(0xFF161C22) : Colors.white,
+          title: Row(
+            children: [
+              const Icon(Icons.location_on, color: Color(0xFF28A745), size: 28),
+              const SizedBox(width: 10),
+              Text(
+                'Location Consent',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Smart Transit collects location data to enable real-time vehicle tracking for passengers, distance-based fare calculation, and shift telemetry, even when the app is closed or not in use.',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This permission is required to run your driver shift. Tracking stops automatically once you end your shift.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: isDark ? Colors.white38 : Colors.black45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Deny',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                context.read<DashboardBloc>().add(const ToggleShiftRequested());
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF28A745),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                'Agree & Start',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -248,9 +337,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   child: ElevatedButton(
                     onPressed: state.isShiftToggling
                         ? null
-                        : () {
-                            context.read<DashboardBloc>().add(const ToggleShiftRequested());
-                          },
+                        : () => _handleStartShift(context, isOnShift),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isOnShift ? Colors.redAccent : const Color(0xFF28A745),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
