@@ -6,13 +6,13 @@ import '../../../../core/push_notification_service.dart';
 class AuthRepository {
   final ApiClient _apiClient = ApiClient();
 
-  Future<Map<String, dynamic>> verifyDriver(String driverId, String busRegistration) async {
+  Future<Map<String, dynamic>> verifyDriver(String loginInput, String password) async {
     try {
       final response = await _apiClient.dio.post(
         '/auth/driver/verify',
         data: {
-          'driverId': driverId,
-          'busRegistration': busRegistration,
+          'loginInput': loginInput,
+          'password': password,
         },
       );
 
@@ -28,9 +28,19 @@ class AuthRepository {
         throw Exception(response.data['message'] ?? 'Verification failed');
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Driver verification failed.');
+      final msg = e.response?.data?['message'];
+      if (msg != null) {
+        if (msg is List) throw Exception(msg.join(', '));
+        throw Exception(msg.toString());
+      }
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        throw Exception('Unable to reach backend server. Check network connection.');
+      }
+      throw Exception('Driver verification failed: ${e.message}');
     } catch (e) {
-      throw Exception('An unexpected error occurred during verification.');
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
@@ -53,9 +63,19 @@ class AuthRepository {
         throw Exception(response.data['message'] ?? 'Google Login failed');
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Google sign-in failed.');
+      final msg = e.response?.data?['message'];
+      if (msg != null) {
+        if (msg is List) throw Exception(msg.join(', '));
+        throw Exception(msg.toString());
+      }
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        throw Exception('Unable to reach backend server. Check network connection.');
+      }
+      throw Exception('Google sign-in failed: ${e.message}');
     } catch (e) {
-      throw Exception('An unexpected error occurred during Google login.');
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 

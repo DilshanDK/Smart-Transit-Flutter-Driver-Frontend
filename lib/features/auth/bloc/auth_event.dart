@@ -7,9 +7,14 @@ class AppStarted extends AuthEvent {
 }
 
 class DriverVerifyRequested extends AuthEvent {
-  final String driverId;
-  final String busRegistration;
-  const DriverVerifyRequested({required this.driverId, required this.busRegistration});
+  final String loginInput;
+  final String password;
+  const DriverVerifyRequested({required this.loginInput, required this.password});
+}
+
+class GoogleLoginRequested extends AuthEvent {
+  final String idToken;
+  const GoogleLoginRequested(this.idToken);
 }
 
 class LogoutRequested extends AuthEvent {

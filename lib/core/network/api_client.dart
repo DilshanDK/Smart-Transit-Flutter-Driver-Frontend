@@ -5,10 +5,8 @@ import '../storage/secure_storage.dart';
 class ApiClient {
   late final Dio dio;
   
-  // Default to Android Emulator host loopback; falls back to localhost on iOS/Web
-  static final String baseUrl = Platform.isAndroid 
-      ? 'http://10.0.2.2:4000' 
-      : 'http://localhost:4000';
+  // Default to localhost:4000 (works on Physical Device via ADB reverse, iOS, & Web)
+  static final String baseUrl = 'http://localhost:4000';
 
   ApiClient() {
     dio = Dio(BaseOptions(

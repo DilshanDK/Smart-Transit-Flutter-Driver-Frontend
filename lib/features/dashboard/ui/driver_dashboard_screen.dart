@@ -21,6 +21,12 @@ class DriverDashboardScreen extends StatefulWidget {
 class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    context.read<DashboardBloc>().add(const LoadProfileRequested());
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good Morning';

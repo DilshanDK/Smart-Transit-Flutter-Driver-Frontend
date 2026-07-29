@@ -9,7 +9,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({required this.authRepository}) : super(const AuthInitial()) {
     on<AppStarted>(_onAppStarted);
     on<DriverVerifyRequested>(_onDriverVerifyRequested);
+    on<GoogleLoginRequested>(_onGoogleLoginRequested);
     on<LogoutRequested>(_onLogoutRequested);
+  }
+
+  Future<void> _onGoogleLoginRequested(GoogleLoginRequested event, Emitter<AuthState> emit) async {
+    emit(const AuthLoading());
+    try {
+      final user = await authRepository.googleLogin(event.idToken);
+      emit(AuthAuthenticated(user));
+    } catch (e) {
+      emit(AuthError(e.toString().replaceAll('Exception: ', '')));
+    }
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
@@ -29,7 +40,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onDriverVerifyRequested(DriverVerifyRequested event, Emitter<AuthState> emit) async {
     emit(const AuthLoading());
     try {
-      final user = await authRepository.verifyDriver(event.driverId, event.busRegistration);
+      final user = await authRepository.verifyDriver(event.loginInput, event.password);
       emit(AuthAuthenticated(user));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));

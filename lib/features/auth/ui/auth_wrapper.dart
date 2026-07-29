@@ -5,38 +5,59 @@ import '../bloc/auth_state.dart';
 import 'driver_login_screen.dart';
 import '../../dashboard/ui/driver_dashboard_screen.dart';
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
 
-    return BlocBuilder<AuthBloc, AuthState>(
+class _AuthWrapperState extends State<AuthWrapper> {
+  final Widget _loginScreen = const DriverLoginScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthError) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      state.message,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFFDC3545),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      },
       builder: (context, state) {
         if (state is AuthAuthenticated) {
           return const DriverDashboardScreen();
-        } else if (state is AuthUnauthenticated || state is AuthError) {
-          return const DriverLoginScreen();
         }
 
-        // Default splash/loading state
-        return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF0F1418) : const Color(0xFFF9F9FE),
-          body: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.directions_bus, size: 64, color: Color(0xFF28A745)),
-                SizedBox(height: 24),
-                CircularProgressIndicator(
-                  color: Color(0xFF28A745),
-                  strokeWidth: 3,
-                ),
-              ],
-            ),
-          ),
-        );
+        // Return the persistent DriverLoginScreen so typed inputs are preserved on AuthError
+        return _loginScreen;
       },
     );
   }
