@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, await_only_futures, deprecated_member_use
+// ignore_for_file: unused_import, use_build_context_synchronously, await_only_futures, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';

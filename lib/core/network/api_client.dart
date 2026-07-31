@@ -1,3 +1,5 @@
+// ignore_for_file: unused_import
+
 import 'package:dio/dio.dart';
 import 'dart:io';
 import '../storage/secure_storage.dart';
