@@ -7,8 +7,8 @@ import '../storage/secure_storage.dart';
 class ApiClient {
   late final Dio dio;
   
-  // Default to localhost:4000 (works on Physical Device via ADB reverse, iOS, & Web)
-  static final String baseUrl = 'http://localhost:4000';
+  // Default to local IP so physical devices on the same WiFi can connect
+  static final String baseUrl = 'http://10.115.205.242:4000';
 
   ApiClient() {
     dio = Dio(BaseOptions(

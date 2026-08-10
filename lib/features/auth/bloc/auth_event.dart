@@ -6,6 +6,11 @@ class AppStarted extends AuthEvent {
   const AppStarted();
 }
 
+/// Fired when the user taps "Retry" from the offline/server-unavailable screen.
+class RetrySessionCheck extends AuthEvent {
+  const RetrySessionCheck();
+}
+
 class DriverVerifyRequested extends AuthEvent {
   final String loginInput;
   final String password;

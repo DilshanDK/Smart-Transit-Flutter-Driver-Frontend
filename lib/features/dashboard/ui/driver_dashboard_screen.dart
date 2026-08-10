@@ -10,6 +10,7 @@ import '../bloc/dashboard_state.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import 'camera_scanner_screen.dart';
+import '../../../core/theme/theme_cubit.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
   const DriverDashboardScreen({super.key});
@@ -394,12 +395,16 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Route 120 - Colombo to Horana',
+                          profile?.assignedRouteId == '593'
+                              ? 'Route 593 - Kandy to Matale'
+                              : 'Route ${profile?.assignedRouteId ?? 'Not Bound'} - Colombo to Horana',
                           style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Next Stop: Nugegoda',
+                          profile?.assignedRouteId == '593'
+                              ? 'Next Stop: Katugastota'
+                              : 'Next Stop: Nugegoda',
                           style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38),
                         ),
                       ],
@@ -546,7 +551,50 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           _buildProfileTile('Licence Number', profile?.driverId ?? 'N/A', Icons.badge_outlined, isDark),
           _buildProfileTile('Bus Assignment', profile?.busRegistration ?? 'None', Icons.airport_shuttle_outlined, isDark),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          // ── Theme Toggle Tile ──
+          BlocBuilder<ThemeCubit, bool>(
+            builder: (context, darkMode) {
+              return GestureDetector(
+                onTap: () => context.read<ThemeCubit>().toggle(),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withOpacity(0.03) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E2E7)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        darkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                        color: darkMode ? const Color(0xFF28A745) : const Color(0xFFFBC02D),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          darkMode ? 'Dark Mode' : 'Light Mode',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      Switch.adaptive(
+                        value: darkMode,
+                        onChanged: (val) => context.read<ThemeCubit>().setDark(val),
+                        activeColor: const Color(0xFF28A745),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 8),
           const Divider(color: Colors.white10),
           const SizedBox(height: 12),
 

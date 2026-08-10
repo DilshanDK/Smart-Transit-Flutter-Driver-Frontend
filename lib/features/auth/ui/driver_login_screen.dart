@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -258,19 +259,39 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
 
 
 
-                          OutlinedButton.icon(
-                            onPressed: (_isGoogleLoading || state is AuthLoading) ? null : _handleGoogleSignIn,
-                            icon: _isGoogleLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Icon(Icons.g_mobiledata_rounded, size: 28),
-                            label: Text(_isGoogleLoading ? 'Connecting to Google...' : 'Sign in with Google'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: theme.colorScheme.onSurface,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: (_isGoogleLoading || state is AuthLoading) ? null : _handleGoogleSignIn,
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0,
+                                backgroundColor: const Color(0xFFE5E5EA),
+                                foregroundColor: const Color(0xFF1F2937),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _isGoogleLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1F2937)),
+                                        )
+                                      : const _GoogleLogo(size: 20),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _isGoogleLoading ? 'Connecting to Google...' : 'Sign in with Google',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF374151),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ).animate().fade(delay: 680.ms).slideY(begin: 0.2, end: 0),
 
@@ -359,3 +380,20 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
     );
   }
 }
+
+/// Official Google G logo image asset
+class _GoogleLogo extends StatelessWidget {
+  final double size;
+  const _GoogleLogo({this.size = 24});
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/g_icon.png',
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+    );
+  }
+}
+

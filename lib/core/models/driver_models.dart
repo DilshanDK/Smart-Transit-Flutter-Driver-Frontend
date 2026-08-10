@@ -4,6 +4,7 @@ class DriverProfile {
   final String email;
   final String driverId;
   final String? busRegistration;
+  final String? assignedRouteId;
   final String role;
   final bool isOnShift;
 
@@ -13,6 +14,7 @@ class DriverProfile {
     required this.email,
     required this.driverId,
     this.busRegistration,
+    this.assignedRouteId,
     required this.role,
     required this.isOnShift,
   });
@@ -24,6 +26,7 @@ class DriverProfile {
       email: json['email'] ?? '',
       driverId: json['driverId'] ?? json['id'] ?? json['_id'] ?? '',
       busRegistration: json['busRegistration'] ?? json['currentBusRegistration'],
+      assignedRouteId: json['assignedRouteId'],
       role: json['role'] ?? 'driver',
       isOnShift: json['isOnShift'] ?? false,
     );
