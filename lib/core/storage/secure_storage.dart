@@ -50,4 +50,13 @@ class SecureStorage {
   static Future<void> clearOfflineTaps() async {
     await _storage.delete(key: _keyOfflineTaps);
   }
+
+  // Generic helpers for other features (e.g. theme preference)
+  static Future<String?> readValue(String key) async {
+    return await _storage.read(key: key);
+  }
+
+  static Future<void> writeValue(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
 }

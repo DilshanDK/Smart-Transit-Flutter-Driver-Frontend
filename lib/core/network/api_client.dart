@@ -1,3 +1,5 @@
+// ignore_for_file: unused_import
+
 import 'package:dio/dio.dart';
 import 'dart:io';
 import '../storage/secure_storage.dart';
@@ -5,10 +7,8 @@ import '../storage/secure_storage.dart';
 class ApiClient {
   late final Dio dio;
   
-  // Default to Android Emulator host loopback; falls back to localhost on iOS/Web
-  static final String baseUrl = Platform.isAndroid 
-      ? 'http://10.0.2.2:4000' 
-      : 'http://localhost:4000';
+  // Default to local IP so physical devices on the same WiFi can connect
+  static final String baseUrl = 'http://10.115.205.242:4000';
 
   ApiClient() {
     dio = Dio(BaseOptions(

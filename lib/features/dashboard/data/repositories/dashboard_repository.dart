@@ -29,13 +29,13 @@ class DashboardRepository {
     try {
       final response = await _apiClient.dio.post('/driver/shift/start');
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Start live location telemetry
-        final routeId = profile.busRegistration ?? profile.driverId;
-        final busNumber = profile.busRegistration ?? profile.driverId;
-        await _trackingService.startTracking(routeId: routeId, busNumber: busNumber);
-        
-        // Refreshed profile
+        // Refreshed profile containing assignments
         final updatedProfile = await getProfile();
+
+        // Start live location telemetry using assigned values
+        final routeId = updatedProfile.assignedRouteId ?? '593';
+        final busNumber = updatedProfile.busRegistration ?? 'CP-NA-5930';
+        await _trackingService.startTracking(routeId: routeId, busNumber: busNumber);
         
         // Trigger background sync of any offline taps
         _triggerBackgroundSync();

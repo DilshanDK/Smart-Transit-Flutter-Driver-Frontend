@@ -1,11 +1,14 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: unused_import, use_build_context_synchronously, await_only_futures, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../data/repositories/auth_repository.dart';
 class DriverLoginScreen extends StatefulWidget {
   const DriverLoginScreen({super.key});
 
@@ -15,13 +18,14 @@ class DriverLoginScreen extends StatefulWidget {
 
 class _DriverLoginScreenState extends State<DriverLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _driverIdController = TextEditingController();
-  final _busRegController = TextEditingController();
+  final _loginInputController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _driverIdController.dispose();
-    _busRegController.dispose();
+    _loginInputController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -29,10 +33,57 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
         DriverVerifyRequested(
-          driverId: _driverIdController.text.trim(),
-          busRegistration: _busRegController.text.trim().toUpperCase(),
+          loginInput: _loginInputController.text.trim(),
+          password: _passwordController.text,
         ),
       );
+    }
+  }
+
+  bool _isGoogleLoading = false;
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        if (mounted) setState(() => _isGoogleLoading = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken != null) {
+        if (!mounted) return;
+        context.read<AuthBloc>().add(GoogleLoginRequested(idToken));
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to retrieve Google ID Token. Check Firebase configuration.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Google Sign-In failed: ${error.toString().replaceAll('Exception: ', '')}'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
@@ -45,11 +96,30 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
-                backgroundColor: theme.colorScheme.error,
+                content: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        state.message,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFFDC3545),
                 behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                duration: const Duration(seconds: 5),
               ),
             );
           }
@@ -119,15 +189,16 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
 
                           // 5. Input Fields
                           TextFormField(
-                            controller: _driverIdController,
+                            controller: _loginInputController,
+                            keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
-                              labelText: 'Driver ID / License Number',
+                              labelText: 'Driver ID or Email',
                               prefixIcon: Icon(Icons.badge_outlined),
-                              hintText: 'e.g. 6649f874c7db8241a...',
+                              hintText: 'e.g. DR-TEST99 or driver@gmail.com',
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your Driver ID';
+                                return 'Please enter your Driver ID or Email';
                               }
                               return null;
                             },
@@ -139,16 +210,22 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                           const SizedBox(height: 16),
 
                           TextFormField(
-                            controller: _busRegController,
-                            textCapitalization: TextCapitalization.characters,
-                            decoration: const InputDecoration(
-                              labelText: 'Bus Registration Number',
-                              prefixIcon: Icon(Icons.airport_shuttle_outlined),
-                              hintText: 'e.g. WP-NB-4852',
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                ),
+                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              ),
+                              hintText: 'Enter your password',
                             ),
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please enter the bus registration number';
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
                               }
                               return null;
                             },
@@ -175,8 +252,48 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                                       strokeWidth: 2.5,
                                     ),
                                   )
-                                : const Text('Start Shift'),
+                                : const Text('Sign In as Driver'),
                           ).animate().fade(delay: 600.ms).slideY(begin: 0.2, end: 0),
+
+                          const SizedBox(height: 16),
+
+
+
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: (_isGoogleLoading || state is AuthLoading) ? null : _handleGoogleSignIn,
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0,
+                                backgroundColor: const Color(0xFFE5E5EA),
+                                foregroundColor: const Color(0xFF1F2937),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _isGoogleLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1F2937)),
+                                        )
+                                      : const _GoogleLogo(size: 20),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _isGoogleLoading ? 'Connecting to Google...' : 'Sign in with Google',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF374151),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ).animate().fade(delay: 680.ms).slideY(begin: 0.2, end: 0),
 
                           const SizedBox(height: 24),
                           
@@ -263,3 +380,20 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
     );
   }
 }
+
+/// Official Google G logo image asset
+class _GoogleLogo extends StatelessWidget {
+  final double size;
+  const _GoogleLogo({this.size = 24});
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/g_icon.png',
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+    );
+  }
+}
+

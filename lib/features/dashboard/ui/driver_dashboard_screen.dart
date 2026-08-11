@@ -10,6 +10,7 @@ import '../bloc/dashboard_state.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import 'camera_scanner_screen.dart';
+import '../../../core/theme/theme_cubit.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
   const DriverDashboardScreen({super.key});
@@ -21,11 +22,106 @@ class DriverDashboardScreen extends StatefulWidget {
 class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    context.read<DashboardBloc>().add(const LoadProfileRequested());
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
+  }
+
+  void _handleStartShift(BuildContext context, bool isOnShift) {
+    if (isOnShift) {
+      context.read<DashboardBloc>().add(const ToggleShiftRequested());
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: isDark ? const Color(0xFF161C22) : Colors.white,
+          title: Row(
+            children: [
+              const Icon(Icons.location_on, color: Color(0xFF28A745), size: 28),
+              const SizedBox(width: 10),
+              Text(
+                'Location Consent',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Smart Transit collects location data to enable real-time vehicle tracking for passengers, distance-based fare calculation, and shift telemetry, even when the app is closed or not in use.',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This permission is required to run your driver shift. Tracking stops automatically once you end your shift.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: isDark ? Colors.white38 : Colors.black45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Deny',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                context.read<DashboardBloc>().add(const ToggleShiftRequested());
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF28A745),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                'Agree & Start',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -248,9 +344,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   child: ElevatedButton(
                     onPressed: state.isShiftToggling
                         ? null
-                        : () {
-                            context.read<DashboardBloc>().add(const ToggleShiftRequested());
-                          },
+                        : () => _handleStartShift(context, isOnShift),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isOnShift ? Colors.redAccent : const Color(0xFF28A745),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -301,12 +395,16 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Route 120 - Colombo to Horana',
+                          profile?.assignedRouteId == '593'
+                              ? 'Route 593 - Kandy to Matale'
+                              : 'Route ${profile?.assignedRouteId ?? 'Not Bound'} - Colombo to Horana',
                           style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Next Stop: Nugegoda',
+                          profile?.assignedRouteId == '593'
+                              ? 'Next Stop: Katugastota'
+                              : 'Next Stop: Nugegoda',
                           style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38),
                         ),
                       ],
@@ -453,7 +551,50 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           _buildProfileTile('Licence Number', profile?.driverId ?? 'N/A', Icons.badge_outlined, isDark),
           _buildProfileTile('Bus Assignment', profile?.busRegistration ?? 'None', Icons.airport_shuttle_outlined, isDark),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          // ── Theme Toggle Tile ──
+          BlocBuilder<ThemeCubit, bool>(
+            builder: (context, darkMode) {
+              return GestureDetector(
+                onTap: () => context.read<ThemeCubit>().toggle(),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withOpacity(0.03) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E2E7)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        darkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                        color: darkMode ? const Color(0xFF28A745) : const Color(0xFFFBC02D),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          darkMode ? 'Dark Mode' : 'Light Mode',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      Switch.adaptive(
+                        value: darkMode,
+                        onChanged: (val) => context.read<ThemeCubit>().setDark(val),
+                        activeColor: const Color(0xFF28A745),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 8),
           const Divider(color: Colors.white10),
           const SizedBox(height: 12),
 
